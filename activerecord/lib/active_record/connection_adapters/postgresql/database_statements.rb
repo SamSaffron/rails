@@ -155,17 +155,31 @@ module ActiveRecord
           Arel::Nodes::BindParam.new "$#{index + 1}"
         end
 
-        def exec_query(sql, name = 'SQL', binds = [])
-          execute_and_clear(sql, name, binds) do |result|
-            types = {}
-            fields = result.fields
-            fields.each_with_index do |fname, i|
-              ftype = result.ftype i
-              fmod  = result.fmod i
-              types[fname] = get_oid_type(ftype, fmod, fname)
-            end
-            ActiveRecord::Result.new(fields, result.values, types)
+        if ENV['PG_RESULT'] == "1"
+
+          def exec_query(sql, name = 'SQL', binds = [])
+
+            result = without_prepared_statement?(binds) ? exec_no_cache(sql, name, binds) :
+                                                          exec_cache(sql, name, binds)
+            PostgreSQLAdapter::Result.new(result,self)
           end
+
+        else
+
+          def exec_query(sql, name = 'SQL', binds = [])
+
+            execute_and_clear(sql, name, binds) do |result|
+              types = {}
+              fields = result.fields
+              fields.each_with_index do |fname, i|
+                ftype = result.ftype i
+                fmod  = result.fmod i
+                types[fname] = get_oid_type(ftype, fmod, fname)
+              end
+              ActiveRecord::Result.new(fields, result.values, types)
+            end
+          end
+
         end
 
         def exec_delete(sql, name = 'SQL', binds = [])

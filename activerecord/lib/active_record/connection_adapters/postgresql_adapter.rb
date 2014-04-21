@@ -8,6 +8,7 @@ require 'active_record/connection_adapters/postgresql/schema_statements'
 require 'active_record/connection_adapters/postgresql/database_statements'
 require 'active_record/connection_adapters/postgresql/referential_integrity'
 require 'active_record/connection_adapters/postgresql/column'
+require 'active_record/connection_adapters/postgresql/result'
 require 'arel/visitors/bind_visitor'
 
 # Make sure we're using pg high enough for PGResult#values
@@ -529,6 +530,17 @@ module ActiveRecord
         Table.new(table_name, base)
       end
 
+      def get_oid_type(oid, fmod, column_name)
+        if !type_map.key?(oid)
+          initialize_type_map(type_map, [oid])
+        end
+
+        type_map.fetch(oid, fmod) {
+          warn "unknown OID #{oid}: failed to recognize type of '#{column_name}'. It will be treated as String."
+          type_map[oid] = OID::Identity.new
+        }
+      end
+
       protected
 
         # Returns the version of the connected PostgreSQL server.
@@ -553,22 +565,13 @@ module ActiveRecord
           end
         end
 
+
       private
 
         def type_map
           @type_map
         end
 
-        def get_oid_type(oid, fmod, column_name)
-          if !type_map.key?(oid)
-            initialize_type_map(type_map, [oid])
-          end
-
-          type_map.fetch(oid, fmod) {
-            warn "unknown OID #{oid}: failed to recognize type of '#{column_name}'. It will be treated as String."
-            type_map[oid] = OID::Identity.new
-          }
-        end
 
         def reload_type_map
           type_map.clear
