@@ -888,6 +888,7 @@ module ActiveRecord
     end
 
     def reorder_bind_params(ast, bvs)
+      return if bvs.length == 0
       ast.grep(Arel::Nodes::BindParam).each_with_index do |bp, i|
         column = bvs[i].first
         bp.replace connection.substitute_at(column, i)
